@@ -24,12 +24,12 @@ app.conf.update(
 )
 
 CREATE_TABLE = """
-CREATE table fetch_result (
-    ID INTEGER PRIMARY KEY ASC,
-    CREATED_AT DATATIME DEFAULT (datetime('now', 'localtime')),
-    from TEXT,
-    to TEXT,
-    status TEXT
+CREATE TABLE fetch_result (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Origin TEXT,
+    Destination TEXT,
+    Status TEXT
 );
 """
 INSERT_SQL = """
