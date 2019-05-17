@@ -34,7 +34,7 @@ CREATE TABLE fetch_result (
 );
 """
 INSERT_SQL = """
-    insert into fetch_result(id, created_at, from, to, status)
+    insert into fetch_result(ID, Timestamp, Origin, Destination, Distance, Duration)
     values (NULL, DATETIME('now'),?,?,?,?);
 """
 
@@ -51,13 +51,12 @@ def fetch_duration():
     }
     ret = get(GOOGLE_URL, params=params)
     if ret.ok:
-        status = ret.json()["rows"]["elements"][0]
+        status = ret.json()["rows"][0]["elements"][0]
         distance = status["distance"]["value"]
         duration = status["duration"]["value"]
         with sqlite3.connect(DB_LOCATION, timeout=100) as sqlite_conn:
             c = sqlite_conn.cursor()
-            hey = c.execute(INSERT_SQL, ("home", "city", distance, duration))
-            print hey
+            c.execute(INSERT_SQL, ("home", "city", distance, duration))
             print status["distance"]["text"], status["duration"]["text"]
             sqlite_conn.commit()
 
