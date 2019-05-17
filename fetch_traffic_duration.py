@@ -46,6 +46,8 @@ def fetch_duration():
         "mode": "driving",
         "region": "nz",
         "units": "metric",
+        "departure_time": "now",
+        "traffic_model": "best_guess",
         "origins": "60 stanhope road, auckland",
         "destinations": "victoria street car park",
     }
@@ -53,11 +55,11 @@ def fetch_duration():
     if ret.ok:
         status = ret.json()["rows"][0]["elements"][0]
         distance = status["distance"]["value"]
-        duration = status["duration"]["value"]
+        duration = status["duration_in_traffic"]["value"]
         with sqlite3.connect(DB_LOCATION, timeout=100) as sqlite_conn:
             c = sqlite_conn.cursor()
             c.execute(INSERT_SQL, ("home", "city", distance, duration))
-            print status["distance"]["text"], status["duration"]["text"]
+            print status["distance"]["text"], status["duration_in_traffic"]["text"]
             sqlite_conn.commit()
 
 
