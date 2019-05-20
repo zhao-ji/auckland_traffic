@@ -70,7 +70,7 @@ def query_all_origins_and_destinations():
 
     ret = {
         "home": {},
-        "office": {}
+        # "office": {}
     }
     for item in rows:
         if item[0] not in ["home", "office"]:
