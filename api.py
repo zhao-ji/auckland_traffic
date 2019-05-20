@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # coding: utf8
 
-from json import dumps
 from datetime import datetime
 
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 
 import sqlite3
 
@@ -49,7 +48,7 @@ def query():
         c.execute(QUERY_SQL, (origin, destination, time_from, time_to))
         rows = c.fetchall()
 
-    return dumps(slim_dataset(rows))
+    return jsonify(slim_dataset(rows))
 
 
 @app.route("/all", methods=['GET'])
@@ -73,18 +72,18 @@ def query_all_origins_and_destinations():
         # "office": {}
     }
     for item in rows:
-        if item[0] not in ["home", "office"]:
+        if item[0] not in ["home", ]:
             continue
         if item[1] not in ret[item[0]]:
-            ret[item[0]][item[1]] = [item[2], item[3]]
+            ret[item[0]][item[1]] = [[item[2], item[3]], ]
         else:
             ret[item[0]][item[1]].append([item[2], item[3]])
 
     for origin in ret:
-        for destination in origin:
+        for destination in ret[origin]:
             ret[origin][destination] = slim_dataset(ret[origin][destination])
 
-    return dumps(ret)
+    return jsonify(ret)
 
 
 if __name__ == '__main__':
