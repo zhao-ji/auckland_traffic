@@ -4,8 +4,8 @@ from requests import get
 import sqlite3
 
 from local_settings import GOOGLE_URL, GOOGLE_API_KEY, REDIS_URL, DB_LOCATION
-from local_settings import HOME, OFFICE
-from local_settings import SCHOOL, CITY, DOMINION_ROAD, KOREAN_SHOP, BARBER_SHOP
+from local_settings import ORIGIN_ADDRESS_LIST, DESTINATION_ADDRESS_LIST
+from local_settings import ORIGIN_LABEL_LIST, DESTINATION_LABEL_LIST
 
 app = Celery("auckland_traffic")
 app.conf.update(
@@ -42,36 +42,36 @@ INSERT_SQL = """
 """
 
 
-def ping():
+@app.task(name="auckland_traffic.fetch_duration")
+def fetch_duration():
     params = {
         "departure_time": "now",
-        "destinations": "|".join([SCHOOL, CITY, DOMINION_ROAD, KOREAN_SHOP, BARBER_SHOP]),
+        "destinations": "|".join(DESTINATION_ADDRESS_LIST),
         "key": GOOGLE_API_KEY,
         "mode": "driving",
-        "origins": "|".join([HOME, OFFICE]),
+        "origins": "|".join(ORIGIN_ADDRESS_LIST),
         "region": "nz",
         "units": "metric",
         "traffic_model": "best_guess",
     }
-    ret = get(GOOGLE_URL, params=params, timeout=(2,5))
+    ret = get(GOOGLE_URL, params=params, timeout=(2, 5))
     if ret.ok:
         data = ret.json()
-        for i in data["rows"]:
-            for j in i["elements"]:
-                yield j
+        if data["status"] != "OK":
+            print "Wired response: " + data["status"]
+            return
 
-
-@app.task(name="auckland_traffic.fetch_duration")
-def fetch_duration():
-    result = ping()
     insert_list = []
-
-    for origin in ["home", "office"]:
-        for destination in ["school", "city", "dominion_road", "korean_shop", "barber_shop"]:
-            data = result.next()
-            distance = data["distance"]["value"]
-            duration = data["duration_in_traffic"]["value"]
-            print " ".join([origin, "=>", destination, data["distance"]["text"], data["duration_in_traffic"]["text"]])
+    for origin_index, origin in enumerate(ORIGIN_LABEL_LIST):
+        for destination_index, destination in enumerate(DESTINATION_LABEL_LIST):
+            item = data["rows"][origin_index]["elements"][destination_index]
+            distance = item["distance"]["value"]
+            duration = item["duration_in_traffic"]["value"]
+            print " ".join([
+                origin, "=>", destination,
+                item["distance"]["text"],
+                item["duration_in_traffic"]["text"]
+            ])
             insert_list.append((origin, destination, distance, duration))
 
     with sqlite3.connect(DB_LOCATION, timeout=100) as sqlite_conn:
