@@ -6,7 +6,6 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
 	<script src="js/utils.js"></script>
-	<script src="js/data.js"></script>
 	<style>
 		canvas {
 			-moz-user-select: none;
@@ -22,18 +21,11 @@
 	</div>
 	<br>
 	<br>
-	<button id="randomizeData">Randomize Data</button>
-	<button id="addData">Add Data</button>
-	<button id="removeData">Remove Data</button>
+	<button id="day">1 Day</button>
+	<button id="3days">3 Days</button>
+	<button id="week">1 Week</button>
+	<br>
 	<script>
-		function newDate(days) {
-			return moment().add(days, 'd').toDate();
-		}
-
-		function newDateString(days) {
-			return moment().add(days, 'd').format();
-		}
-
 		var color = Chart.helpers.color;
 		var config = {
 			type: 'line',
@@ -43,7 +35,7 @@
 					backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
 					borderColor: window.chartColors.blue,
 					fill: false,
-					data: pointForChart,
+					data: [],
 				}]
 			},
 			options: {
@@ -80,39 +72,77 @@
 
 		window.onload = function() {
 			var ctx = document.getElementById('canvas').getContext('2d');
-			window.myLine = new Chart(ctx, config);
+
+            loadJSON("http://traffic.minganci.org/?time_from=1558287719", function (data){
+                let pointForChart = data.map(point => {
+                    let date = new Date(point[0] + " UTC");
+                    return {
+                        x: date,
+                        y: Math.round(point[1]/60)
+                    };
+                });
+
+                config.data.datasets.forEach(function(dataset) {
+                    dataset.data = pointForChart;
+                });
+                window.myLine = new Chart(ctx, config);
+            });
 		};
 
-		document.getElementById('randomizeData').addEventListener('click', function() {
-			config.data.datasets.forEach(function(dataset) {
-				dataset.data.forEach(function(dataObj) {
-					dataObj.y = randomScalingFactor();
-				});
-			});
+		document.getElementById('day').addEventListener('click', function() {
+            let timeFrom = new Date().getTime();
+            timeFrom = Math.round(timeFrom/1000) - 24 * 3600;
+            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+                let pointForChart = data.map(point => {
+                    let date = new Date(point[0] + " UTC");
+                    return {
+                        x: date,
+                        y: Math.round(point[1]/60)
+                    };
+                });
 
-			window.myLine.update();
+                config.data.datasets.forEach(function(dataset) {
+                    dataset.data = pointForChart;
+                });
+                window.myLine.update();
+            });
 		});
-		document.getElementById('addData').addEventListener('click', function() {
-			if (config.data.datasets.length > 0) {
-				config.data.datasets[0].data.push({
-					x: newDateString(config.data.datasets[0].data.length + 2),
-					y: randomScalingFactor()
-				});
-				config.data.datasets[1].data.push({
-					x: newDate(config.data.datasets[1].data.length + 2),
-					y: randomScalingFactor()
-				});
+		document.getElementById('3days').addEventListener('click', function() {
+            let timeFrom = new Date().getTime();
+            timeFrom = Math.round(timeFrom/1000) - 3 * 24 * 3600;
+            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+                let pointForChart = data.map(point => {
+                    let date = new Date(point[0] + " UTC");
+                    return {
+                        x: date,
+                        y: Math.round(point[1]/60)
+                    };
+                });
 
-				window.myLine.update();
-			}
+                config.data.datasets.forEach(function(dataset) {
+                    dataset.data = pointForChart;
+                });
+                window.myLine.update();
+            });
 		});
 
-		document.getElementById('removeData').addEventListener('click', function() {
-			config.data.datasets.forEach(function(dataset) {
-				dataset.data.pop();
-			});
+		document.getElementById('week').addEventListener('click', function() {
+            let timeFrom = new Date().getTime();
+            timeFrom = Math.round(timeFrom/1000) - 7 * 24 * 3600;
+            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+                let pointForChart = data.map(point => {
+                    let date = new Date(point[0] + " UTC");
+                    return {
+                        x: date,
+                        y: Math.round(point[1]/60)
+                    };
+                });
 
-			window.myLine.update();
+                config.data.datasets.forEach(function(dataset) {
+                    dataset.data = pointForChart;
+                });
+                window.myLine.update();
+            });
 		});
 	</script>
 </body>
