@@ -47,10 +47,15 @@
 				scales: {
 					xAxes: [{
 						type: 'time',
+                        time: {
+                            displayFormats: {
+                                hour: "DD hA"
+                            }
+                        },
 						display: true,
 						scaleLabel: {
 							display: true,
-							labelString: 'Date'
+							labelString: 'Datetime (h)'
 						},
 						ticks: {
 							major: {
@@ -63,7 +68,7 @@
 						display: true,
 						scaleLabel: {
 							display: true,
-							labelString: 'value'
+							labelString: 'Duration (min)'
 						}
 					}]
 				}
