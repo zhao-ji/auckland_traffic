@@ -73,7 +73,7 @@
 		window.onload = function() {
 			var ctx = document.getElementById('canvas').getContext('2d');
 
-            loadJSON("http://traffic.minganci.org/?time_from=1558287719", function (data){
+            loadJSON("http://traffic.minganci.org/api/?time_from=1558287719", function (data){
                 let pointForChart = data.map(point => {
                     let date = new Date(point[0] + " UTC");
                     return {
@@ -92,7 +92,7 @@
 		document.getElementById('day').addEventListener('click', function() {
             let timeFrom = new Date().getTime();
             timeFrom = Math.round(timeFrom/1000) - 24 * 3600;
-            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
                 let pointForChart = data.map(point => {
                     let date = new Date(point[0] + " UTC");
                     return {
@@ -110,7 +110,7 @@
 		document.getElementById('3days').addEventListener('click', function() {
             let timeFrom = new Date().getTime();
             timeFrom = Math.round(timeFrom/1000) - 3 * 24 * 3600;
-            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
                 let pointForChart = data.map(point => {
                     let date = new Date(point[0] + " UTC");
                     return {
@@ -129,7 +129,7 @@
 		document.getElementById('week').addEventListener('click', function() {
             let timeFrom = new Date().getTime();
             timeFrom = Math.round(timeFrom/1000) - 7 * 24 * 3600;
-            loadJSON("http://traffic.minganci.org/?time_from=" + timeFrom, function (data){
+            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
                 let pointForChart = data.map(point => {
                     let date = new Date(point[0] + " UTC");
                     return {
