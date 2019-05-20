@@ -78,7 +78,9 @@
 		window.onload = function() {
 			var ctx = document.getElementById('canvas').getContext('2d');
 
-            loadJSON("http://traffic.minganci.org/api/?time_from=1558287719", function (data){
+            let timeFrom = new Date().getTime();
+            timeFrom = Math.round(timeFrom/1000) - 6 * 3600;
+            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
                 let pointForChart = data.map(point => {
                     let date = new Date(point[0] + " UTC");
                     return {
@@ -97,18 +99,32 @@
 		document.getElementById('day').addEventListener('click', function() {
             let timeFrom = new Date().getTime();
             timeFrom = Math.round(timeFrom/1000) - 24 * 3600;
-            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
-                let pointForChart = data.map(point => {
-                    let date = new Date(point[0] + " UTC");
-                    return {
-                        x: date,
-                        y: Math.round(point[1]/60)
-                    };
+            loadJSON("http://traffic.minganci.org/api/all?time_from=" + timeFrom, function (data){
+                let chartData = [];
+                let colorIndex = 0;
+
+                Object.keys(data).forEach(origin => {
+                    Object.keys(data[origin]).forEach(destination => {
+                        let pointForChart = data[origin][destination].map(point => {
+                            let date = new Date(point[0] + " UTC");
+                            return {
+                                x: date,
+                                y: Math.round(point[1]/60)
+                            };
+                        });
+                        let chartColor = window.chartColor[Object.keys(window.chartColor)[colorIndex]]
+                        chartData.push({
+                            label: origin + " to " + destination,
+                            backgroundColor: color(chartColor).alpha(0.5).rgbString(),
+                            borderColor: chartColor,
+                            fill: false,
+                            data: pointForChart,
+                        });
+                        colorIndex += 1;
+                    })
                 });
 
-                config.data.datasets.forEach(function(dataset) {
-                    dataset.data = pointForChart;
-                });
+                config.data.datasets = chartData;
                 window.myLine.update();
             });
 		});
