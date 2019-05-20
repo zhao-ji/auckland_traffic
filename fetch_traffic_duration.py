@@ -16,7 +16,7 @@ app.conf.update(
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
             "task": "auckland_traffic.fetch_duration",
-            "schedule": crontab(minute="*"),
+            "schedule": crontab(minute="*/2"),
             "options": {
                 "expires": 30,
                 "priority": 0,
@@ -53,7 +53,7 @@ def ping():
         "units": "metric",
         "traffic_model": "best_guess",
     }
-    ret = get(GOOGLE_URL, params=params)
+    ret = get(GOOGLE_URL, params=params, timeout=(2,5))
     if ret.ok:
         data = ret.json()
         for i in data["rows"]:
@@ -71,12 +71,12 @@ def fetch_duration():
             data = result.next()
             distance = data["distance"]["value"]
             duration = data["duration_in_traffic"]["value"]
-            print origin, " => ", destination, data["distance"]["text"], data["duration_in_traffic"]["text"]
+            print " ".join([origin, "=>", destination, data["distance"]["text"], data["duration_in_traffic"]["text"]])
             insert_list.append((origin, destination, distance, duration))
 
     with sqlite3.connect(DB_LOCATION, timeout=100) as sqlite_conn:
         c = sqlite_conn.cursor()
-        c.execute(INSERT_SQL, insert_list)
+        c.executemany(INSERT_SQL, insert_list)
         sqlite_conn.commit()
 
 
