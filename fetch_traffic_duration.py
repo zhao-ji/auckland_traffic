@@ -13,10 +13,12 @@ app.conf.update(
     BROKER_URL=REDIS_URL,
     CELERY_TASK_SERIALIZER="json",
     CELERY_ACCEPT_CONTENT=["json"],
+    CELERY_RESULT_BACKEND="db+sqlite:////var/lib/sqlite3/auckland_traffic_celery_result_db",
+    CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
             "task": "auckland_traffic.fetch_duration",
-            "schedule": crontab(minute="*/2"),
+            "schedule": crontab(minute="*/5"),
             "options": {
                 "expires": 30,
                 "priority": 0,
