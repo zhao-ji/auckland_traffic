@@ -75,30 +75,20 @@
 			}
 		};
 
-		window.onload = function() {
-			var ctx = document.getElementById('canvas').getContext('2d');
-
-            let timeFrom = new Date().getTime();
-            timeFrom = Math.round(timeFrom/1000) - 6 * 3600;
-            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
-                let pointForChart = data.map(point => {
-                    let date = new Date(point[0] + " UTC");
-                    return {
-                        x: date,
-                        y: Math.round(point[1]/60)
-                    };
-                });
-
-                config.data.datasets.forEach(function(dataset) {
-                    dataset.data = pointForChart;
-                });
+        function putDataIntoChart(chartData, initial=false) {
+            if (initial) {
+                var ctx = document.getElementById('canvas').getContext('2d');
+                config.data.datasets = chartData;
                 window.myLine = new Chart(ctx, config);
-            });
-		};
+            } else {
+                config.data.datasets = chartData;
+                window.myLine.update();
+            }
+        }
 
-		document.getElementById('day').addEventListener('click', function() {
+        function updateChart(hour=6, initial=false) {
             let timeFrom = new Date().getTime();
-            timeFrom = Math.round(timeFrom/1000) - 24 * 3600;
+            timeFrom = Math.round(timeFrom/1000) - hour * 3600;
             loadJSON("http://traffic.minganci.org/api/all?time_from=" + timeFrom, function (data){
                 let chartData = [];
                 let colorIndex = 0;
@@ -112,7 +102,7 @@
                                 y: Math.round(point[1]/60)
                             };
                         });
-                        let chartColor = window.chartColor[Object.keys(window.chartColor)[colorIndex]]
+                        let chartColor = window.chartColors[Object.keys(window.chartColors)[colorIndex]]
                         chartData.push({
                             label: origin + " to " + destination,
                             backgroundColor: color(chartColor).alpha(0.5).rgbString(),
@@ -124,46 +114,21 @@
                     })
                 });
 
-                config.data.datasets = chartData;
-                window.myLine.update();
+                putDataIntoChart(chartData, initial=initial);
             });
+        }
+
+		window.onload = function() {
+            updateChart(3, initial=true);
+		};
+		document.getElementById('day').addEventListener('click', function() {
+            updateChart(24);
 		});
 		document.getElementById('3days').addEventListener('click', function() {
-            let timeFrom = new Date().getTime();
-            timeFrom = Math.round(timeFrom/1000) - 3 * 24 * 3600;
-            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
-                let pointForChart = data.map(point => {
-                    let date = new Date(point[0] + " UTC");
-                    return {
-                        x: date,
-                        y: Math.round(point[1]/60)
-                    };
-                });
-
-                config.data.datasets.forEach(function(dataset) {
-                    dataset.data = pointForChart;
-                });
-                window.myLine.update();
-            });
+            updateChart(72);
 		});
-
 		document.getElementById('week').addEventListener('click', function() {
-            let timeFrom = new Date().getTime();
-            timeFrom = Math.round(timeFrom/1000) - 7 * 24 * 3600;
-            loadJSON("http://traffic.minganci.org/api/?time_from=" + timeFrom, function (data){
-                let pointForChart = data.map(point => {
-                    let date = new Date(point[0] + " UTC");
-                    return {
-                        x: date,
-                        y: Math.round(point[1]/60)
-                    };
-                });
-
-                config.data.datasets.forEach(function(dataset) {
-                    dataset.data = pointForChart;
-                });
-                window.myLine.update();
-            });
+            updateChart(24*7);
 		});
 	</script>
 </body>
