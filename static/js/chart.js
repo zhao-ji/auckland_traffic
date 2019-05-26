@@ -47,6 +47,24 @@ var config = {
 	}
 };
 
+function loadJSON(path, success, error) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function()
+    {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                if (success)
+                    success(JSON.parse(xhr.responseText));
+            } else {
+                if (error)
+                    error(xhr);
+            }
+        }
+    };
+    xhr.open("GET", path, true);
+    xhr.send();
+}
+
 function putDataIntoChart(chartData, initial=false) {
     if (initial) {
         var ctx = document.getElementById('canvas').getContext('2d');
@@ -86,12 +104,12 @@ function updateChart(hour=6, initial=false) {
             })
         });
 
-        putDataIntoChart(chartData, initial=initial);
+        putDataIntoChart(chartData, initial);
     });
 }
 
 window.onload = function() {
-    updateChart(3, initial=true);
+    updateChart(3, true);
 };
 document.getElementById('12hours').addEventListener('click', function() {
     updateChart(12);
