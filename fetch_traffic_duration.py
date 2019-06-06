@@ -18,7 +18,7 @@ app.conf.update(
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
             "task": "auckland_traffic.fetch_duration",
-            "schedule": crontab(minute="*/5"),
+            "schedule": crontab(minute="*/3"),
             "options": {
                 "expires": 30,
                 "priority": 0,
