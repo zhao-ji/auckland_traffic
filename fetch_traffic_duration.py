@@ -1,5 +1,8 @@
+from json import dumps
+
 from celery import Celery
 from celery.schedules import crontab
+from redis import StrictRedis
 from requests import get
 import sqlite3
 
@@ -80,6 +83,9 @@ def fetch_duration():
         c = sqlite_conn.cursor()
         c.executemany(INSERT_SQL, insert_list)
         sqlite_conn.commit()
+
+    queue = StrictRedis(host="localhost", port="6379")
+    queue.publist("traffic", dumps(insert_list))
 
 
 if __name__ == "__main__":
