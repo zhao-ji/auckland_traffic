@@ -11,7 +11,7 @@ from local_settings import ORIGIN_ADDRESS_LIST, DESTINATION_ADDRESS_LIST
 from local_settings import ORIGIN_LABEL_LIST, DESTINATION_LABEL_LIST
 from local_settings import LOCAL_WEBSOCKET_SERVER
 
-app = Celery("auckland_traffic")
+app = Celery("tasks")
 app.conf.update(
     CELERY_TIMEZONE="Pacific/Auckland",
     BROKER_URL=REDIS_URL,
@@ -22,7 +22,7 @@ app.conf.update(
     CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
-            "task": "auckland_traffic.fetch_duration",
+            "task": "tasks.fetch_duration",
             "schedule": crontab(minute="*/3"),
             "options": {
                 "expires": 30,

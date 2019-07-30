@@ -11,11 +11,15 @@ from geventwebsocket import WebSocketServer, WebSocketApplication
 
 class TrafficHandler(WebSocketApplication):
 
-    def on_open(self):
-        print "something come!"
-
-    def on_close(self):
+    def on_open(self, *args, **kwargs):
+        pprint(args)
+        pprint(kwargs)
         print 'delete the connection'
+
+    def on_close(self, *args, **kwargs):
+        pprint(args)
+        pprint(kwargs)
+        print "something come!"
 
     def on_message(self, message):
         if message is None:
@@ -27,11 +31,12 @@ class TrafficHandler(WebSocketApplication):
             self.broadcast(message)
 
     def broadcast(self, message):
-        for client in self.ws.handler.server.clients.values():
-            pprint(dir(client))
+        for addr, client in self.ws.handler.server.clients.iteritems():
+            pprint(addr)
+            pprint(client.address)
             client.ws.send(json.dumps({
                 'msg_type': 'MESSAGE',
-                'message': message['msg_data']
+                'message': message['msg_data'],
             }))
 
 
