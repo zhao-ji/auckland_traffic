@@ -2,13 +2,14 @@ from json import dumps
 
 from celery import Celery
 from celery.schedules import crontab
-from redis import StrictRedis
 from requests import get
 import sqlite3
+from websocket import create_connection
 
 from local_settings import GOOGLE_URL, GOOGLE_API_KEY, REDIS_URL, DB_LOCATION
 from local_settings import ORIGIN_ADDRESS_LIST, DESTINATION_ADDRESS_LIST
 from local_settings import ORIGIN_LABEL_LIST, DESTINATION_LABEL_LIST
+from local_settings import LOCAL_WEBSOCKET_SERVER
 
 app = Celery("auckland_traffic")
 app.conf.update(
@@ -16,7 +17,8 @@ app.conf.update(
     BROKER_URL=REDIS_URL,
     CELERY_TASK_SERIALIZER="json",
     CELERY_ACCEPT_CONTENT=["json"],
-    CELERY_RESULT_BACKEND="db+sqlite:////var/lib/sqlite3/auckland_traffic_celery_result_db",
+    CELERY_RESULT_BACKEND=("db+sqlite:////var/lib/sqlite3/"
+                           "auckland_traffic_celery_result_db"),
     CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
@@ -84,8 +86,12 @@ def fetch_duration():
         c.executemany(INSERT_SQL, insert_list)
         sqlite_conn.commit()
 
-    queue = StrictRedis(host="localhost", port="6379")
-    queue.publist("traffic", dumps(insert_list))
+    websocket_client = create_connection(LOCAL_WEBSOCKET_SERVER)
+    websocket_client.send(dumps({
+        "msg_type": "MESSAGE",
+        "msg_data": insert_list,
+    }))
+    websocket_client.close()
 
 
 if __name__ == "__main__":
