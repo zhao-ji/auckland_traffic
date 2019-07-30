@@ -1,15 +1,19 @@
+#!/usr/bin/env python
+# utf-8
+
 from json import dumps
 
 from celery import Celery
 from celery.schedules import crontab
 from requests import get
-import sqlite3
 from websocket import create_connection
 
-from local_settings import GOOGLE_URL, GOOGLE_API_KEY, REDIS_URL, DB_LOCATION
+from local_settings import GOOGLE_URL, GOOGLE_API_KEY, REDIS_URL
 from local_settings import ORIGIN_ADDRESS_LIST, DESTINATION_ADDRESS_LIST
 from local_settings import ORIGIN_LABEL_LIST, DESTINATION_LABEL_LIST
 from local_settings import LOCAL_WEBSOCKET_SERVER
+
+from operate import multi_insert
 
 app = Celery("tasks")
 app.conf.update(
@@ -31,22 +35,6 @@ app.conf.update(
         }
     }
 )
-
-CREATE_TABLE = """
-CREATE TABLE fetch_result (
-    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    Origin TEXT,
-    Destination TEXT,
-    Duration INTEGER,
-    Distance INTEGER
-);
-"""
-INSERT_SQL = """
-    insert into
-    fetch_result(ID, Timestamp, Origin, Destination, Distance, Duration)
-    values (NULL, DATETIME('now'),?,?,?,?);
-"""
 
 
 @app.task(name="auckland_traffic.fetch_duration")
@@ -81,10 +69,7 @@ def fetch_duration():
             ])
             insert_list.append((origin, destination, distance, duration))
 
-    with sqlite3.connect(DB_LOCATION, timeout=100) as sqlite_conn:
-        c = sqlite_conn.cursor()
-        c.executemany(INSERT_SQL, insert_list)
-        sqlite_conn.commit()
+    multi_insert(insert_list)
 
     websocket_client = create_connection(LOCAL_WEBSOCKET_SERVER)
     websocket_client.send(dumps({
