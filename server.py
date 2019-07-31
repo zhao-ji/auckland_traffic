@@ -64,9 +64,9 @@ class TrafficHandler(WebSocketApplication):
 
 
 if __name__ == "__main__":
-    print("Listen on 0.0.0.0:8005...")
+    print "Listen on 127.0.0.1:8001..."
     WebSocketServer(
-        ('0.0.0.0', 8005),
+        ('127.0.0.1', 8001),
         Resource(OrderedDict([
             ("/", TrafficHandler),
         ])),
