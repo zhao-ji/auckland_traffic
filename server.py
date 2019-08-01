@@ -14,21 +14,21 @@ from operate import fetch, fetch_all
 class TrafficHandler(WebSocketApplication):
 
     def on_open(self, *args, **kwargs):
-        print 'delete the connection'
+        print 'open the connection'
 
     def on_close(self, *args, **kwargs):
-        print "something come!"
+        print "delete the connection!"
 
     def fetch_all_data(self):
         self.ws.send(json.dumps({
-            'msg_type': 'MESSAGE',
-            'message': fetch_all(),
+            'type': 'SUBSCRIBE_SUCCESS',
+            'data': fetch_all("1564405375"),
         }))
 
     def fetch_data(self, message):
         self.ws.send(json.dumps({
-            'msg_type': 'MESSAGE',
-            'message': fetch(
+            'type': 'MESSAGE',
+            'data': fetch(
                 message["origin"],
                 message["destination"],
                 message["from"],
@@ -42,13 +42,13 @@ class TrafficHandler(WebSocketApplication):
 
         message = json.loads(message)
 
-        if message['msg_type'] == 'MESSAGE':
+        if message['type'] == 'MESSAGE':
             self.broadcast(message)
-        elif message['msg_type'] == 'SUBSCRIBE':
+        elif message['type'] == 'SUBSCRIBE':
             self.fetch_all_data()
-        elif message['msg_type'] == 'UNSUBSCRIBE':
+        elif message['type'] == 'UNSUBSCRIBE':
             self.on_close()
-        elif message['msg_type'] == 'FETCH':
+        elif message['type'] == 'FETCH':
             self.fetch_data(message)
         else:
             pprint(message)
@@ -58,8 +58,8 @@ class TrafficHandler(WebSocketApplication):
             pprint(addr)
             pprint(client.address)
             client.ws.send(json.dumps({
-                'msg_type': 'MESSAGE',
-                'message': message['msg_data'],
+                'type': 'MESSAGE',
+                'data': message['msg_data'],
             }))
 
 
