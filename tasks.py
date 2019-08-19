@@ -26,8 +26,8 @@ app.conf.update(
     CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
-            "task": "tasks.fetch_duration",
-            "schedule": crontab(minute="*/3"),
+            "task": "auckland_traffic.fetch_duration",
+            "schedule": crontab(minute="0"),
             "options": {
                 "expires": 30,
                 "priority": 0,
@@ -70,13 +70,53 @@ def fetch_duration():
             insert_list.append((origin, destination, distance, duration))
 
     multi_insert(insert_list)
+    ws_send(insert_list, "MESSAGE")
 
+
+def ws_send(data, message_type="", address=None):
     websocket_client = create_connection(LOCAL_WEBSOCKET_SERVER)
-    websocket_client.send(dumps({
-        "msg_type": "MESSAGE",
-        "msg_data": insert_list,
-    }))
+    if address:
+        websocket_client.send(dumps({
+            "type": "REPLY",
+            "data": data,
+            "data_type": message_type,
+            "address": address,
+        }))
+    else:
+        websocket_client.send(dumps({
+            "type": "BROADCAST",
+            "data": data,
+            "data_type": message_type,
+        }))
     websocket_client.close()
+
+
+@app.task(name="auckland_traffic.trace")
+def trace(start, stop, method, address):
+    params = {
+        "departure_time": "now",
+        "key": GOOGLE_API_KEY,
+        "mode": method,
+        "origins": start,
+        "destinations": stop,
+        "region": "nz",
+        "units": "metric",
+        "traffic_model": "best_guess",
+    }
+    ret = get(GOOGLE_URL, params=params, timeout=(2, 5))
+    if ret.ok:
+        data = ret.json()
+        if data["status"] == "OK":
+            item = data["rows"][0]["elements"][0]
+            distance = item["distance"]["value"]
+            duration = item["duration_in_traffic"]["value"]
+            return ws_send(
+                {"distance": distance, "duration": duration},
+                "FETCH_TRACE_DATA_SUCCESS",
+                address,
+            )
+
+    return ws_send("Ops, something happened!", "FETCH_TRACE_DATA_ERROR", address)
 
 
 if __name__ == "__main__":

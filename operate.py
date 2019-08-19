@@ -24,7 +24,8 @@ INSERT_SQL = """
 """
 QUERY_SQL = """
     select Timestamp, Duration from fetch_result
-    where Origin = ? and Destination = ? and Timestamp >= ? and Timestamp <= ? ;
+    where Origin = ? and Destination = ?
+    and Timestamp >= ? and Timestamp <= ? ;
 """
 QUERY_ALL_SQL = """
     select Origin, Destination, Timestamp, Duration from fetch_result
@@ -65,11 +66,17 @@ def fetch_all(time_from, time_to="now"):
         else:
             ret[item[0]][item[1]].append([item[2], item[3]])
 
+    result = []
+
     for origin in ret:
         for destination in ret[origin]:
-            ret[origin][destination] = slim_dataset(ret[origin][destination])
+            result.append({
+                "start": origin,
+                "stop": destination,
+                "data": slim_dataset(ret[origin][destination]),
+            })
 
-    return ret
+    return result
 
 
 def fetch(origin, destination, time_from, time_to):
