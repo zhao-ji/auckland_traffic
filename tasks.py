@@ -91,8 +91,8 @@ def ws_send(data, message_type="", address=None):
     websocket_client.close()
 
 
-@app.task(name="auckland_traffic.trace")
-def trace(start, stop, method, address):
+@app.task(name="auckland_traffic.google_trace")
+def google_trace(start, stop, method, address):
     params = {
         "departure_time": "now",
         "key": GOOGLE_API_KEY,
@@ -108,8 +108,11 @@ def trace(start, stop, method, address):
         data = ret.json()
         if data["status"] == "OK":
             item = data["rows"][0]["elements"][0]
-            distance = item["distance"]["value"]
-            duration = item["duration_in_traffic"]["value"]
+            distance = item["distance"]["text"]
+            if method == "driving":
+                duration = item["duration_in_traffic"]["text"]
+            else:
+                duration = item["duration"]["text"]
             return ws_send(
                 {"distance": distance, "duration": duration},
                 "FETCH_TRACE_DATA_SUCCESS",
@@ -117,6 +120,16 @@ def trace(start, stop, method, address):
             )
 
     return ws_send("Ops, something happened!", "FETCH_TRACE_DATA_ERROR", address)
+
+
+@app.task(name="auckland_traffic.bing_trace")
+def bing_trace(start, stop, method, address):
+    pass
+
+
+@app.task(name="auckland_traffic.address_suggest")
+def address_suggest(addr, address):
+    pass
 
 
 if __name__ == "__main__":

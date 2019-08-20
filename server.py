@@ -9,7 +9,7 @@ from geventwebsocket import Resource
 from geventwebsocket import WebSocketServer, WebSocketApplication
 
 from operate import fetch, fetch_all
-from tasks import trace
+from tasks import google_trace, bing_trace, address_suggest
 
 
 class TrafficHandler(WebSocketApplication):
@@ -37,10 +37,6 @@ class TrafficHandler(WebSocketApplication):
             ),
         }))
 
-    def trace(self, message):
-        print self.ws.handler.client_address
-        trace.delay(message["start"], message["stop"], message["method"], self.ws.handler.client_address)
-
     def on_message(self, message):
         if message is None:
             return
@@ -57,7 +53,20 @@ class TrafficHandler(WebSocketApplication):
         elif message['type'] == 'FETCH_TRAFFIC_DATA_TRY':
             self.fetch_data(message)
         elif message['type'] == 'FETCH_TRACE_DATA_TRY':
-            self.trace(message)
+            google_trace.delay(
+                message["start"], message["stop"], message["method"],
+                self.ws.handler.client_address,
+            )
+        elif message['type'] == 'FETCH_BING_TRACE_DATA_TRY':
+            bing_trace.delay(
+                message["start"], message["stop"], message["method"],
+                self.ws.handler.client_address,
+            )
+        elif message['type'] == 'FETCH_ADDRESS_SUGGESTIONS_TRY':
+            address_suggest.delay(
+                message["address"],
+                self.ws.handler.client_address,
+            )
         elif message['type'] == 'BROADCAST':
             self.broadcast(message)
         elif message['type'] == 'REPLY':
@@ -79,8 +88,6 @@ class TrafficHandler(WebSocketApplication):
             print "message body error"
             return
 
-        from pprint import pprint
-        pprint(message)
         address = message["address"]
 
         for addr, client in self.ws.handler.server.clients.iteritems():
