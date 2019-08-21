@@ -1,14 +1,20 @@
 #!/usr/bin/env python
 # utf-8
 
+from datetime import datetime
+from functools import wraps
 from json import dumps
+# from pprint import pprint
 
 from celery import Celery
 from celery.schedules import crontab
 from requests import get
 from websocket import create_connection
 
-from local_settings import GOOGLE_URL, GOOGLE_API_KEY, REDIS_URL
+from local_settings import GOOGLE_URL, GOOGLE_PREDICT_URL, GOOGLE_API_KEY
+from local_settings import GOOGLE_GEOCODE_URL
+from local_settings import BING_URL, BING_API_KEY
+from local_settings import REDIS_URL
 from local_settings import ORIGIN_ADDRESS_LIST, DESTINATION_ADDRESS_LIST
 from local_settings import ORIGIN_LABEL_LIST, DESTINATION_LABEL_LIST
 from local_settings import LOCAL_WEBSOCKET_SERVER
@@ -91,7 +97,27 @@ def ws_send(data, message_type="", address=None):
     websocket_client.close()
 
 
+def websocket_wrap(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        try:
+            assert "address" in kwargs
+            address = kwargs.pop("address")
+            assert "success_constant" in kwargs
+            success_constant = kwargs.pop("success_constant")
+            assert "fail_constant" in kwargs
+            fail_constant = kwargs.pop("fail_constant")
+            data = function(*args, **kwargs)
+        except Exception as e:
+            error_msg = e.info or "Ops, something happened!"
+            return ws_send(error_msg, fail_constant, address)
+        else:
+            return ws_send(data, success_constant, address)
+    return wrapper
+
+
 @app.task(name="auckland_traffic.google_trace")
+@websocket_wrap
 def google_trace(start, stop, method, address):
     params = {
         "departure_time": "now",
@@ -104,33 +130,80 @@ def google_trace(start, stop, method, address):
         "traffic_model": "best_guess",
     }
     ret = get(GOOGLE_URL, params=params, timeout=(2, 5))
-    if ret.ok:
-        data = ret.json()
-        if data["status"] == "OK":
-            item = data["rows"][0]["elements"][0]
-            distance = item["distance"]["text"]
-            if method == "driving":
-                duration = item["duration_in_traffic"]["text"]
-            else:
-                duration = item["duration"]["text"]
-            return ws_send(
-                {"distance": distance, "duration": duration},
-                "FETCH_TRACE_DATA_SUCCESS",
-                address,
-            )
+    assert ret.ok
 
-    return ws_send("Ops, something happened!", "FETCH_TRACE_DATA_ERROR", address)
+    data = ret.json()
+    assert data["status"] == "OK"
+
+    item = data["rows"][0]["elements"][0]
+    distance = item["distance"]["text"]
+    if method == "driving":
+        duration = item["duration_in_traffic"]["text"]
+    else:
+        duration = item["duration"]["text"]
+    return {"distance": distance, "duration": duration}
 
 
 @app.task(name="auckland_traffic.bing_trace")
-def bing_trace(start, stop, method, address):
-    pass
+@websocket_wrap
+def bing_trace(start, stop, method):
+    params = {
+        "origins": address_translate(start),
+        "destinations": address_translate(stop),
+        "travelMode": method,
+        "startTime": datetime.now().strftime('%Y-%m-%dT12:00:00-%H:%M'),
+        "key": BING_API_KEY,
+    }
+    ret = get(BING_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    assert data["statusCode"] == 200
+
+    result = data["resourceSets"][0]["resources"][0]["results"][0]
+    return {
+        "distance": result["travelDistance"],
+        "duration": result["travelDuration"],
+    }
+
+
+def address_translate(address_text):
+    """
+    address_text => latitude, longitude
+    """
+    params = {
+        "key": GOOGLE_API_KEY,
+        "address": address_text,
+    }
+    ret = get(GOOGLE_GEOCODE_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    location = data["results"][0]["geometry"]["location"]
+    return "{},{}".format(location["lat"], location["lng"])
 
 
 @app.task(name="auckland_traffic.address_suggest")
-def address_suggest(addr, address):
-    pass
+@websocket_wrap
+def address_suggest(input_text, sessiontoken):
+    params = {
+        "key": GOOGLE_API_KEY,
+        "components": "country:nz",
+        "types": "address",
+        "sessiontoken": sessiontoken,
+        "input": input_text,
+    }
+    ret = get(GOOGLE_PREDICT_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    predictions = data["predictions"]
+    return [i["description"] for i in predictions]
 
 
 if __name__ == "__main__":
-    fetch_duration()
+    # address_suggest("188 carrin", "123456")
+    # address_translate("68 stanhope road, auckland")
+    bing_trace(
+        "60 stanhope road, auckland",
+        "188 carrington road, auckland", "driving")

@@ -55,17 +55,23 @@ class TrafficHandler(WebSocketApplication):
         elif message['type'] == 'FETCH_TRACE_DATA_TRY':
             google_trace.delay(
                 message["start"], message["stop"], message["method"],
-                self.ws.handler.client_address,
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_TRACE_DATA_SUCCESS",
+                fail_constant="FETCH_TRACE_DATA_FAIL",
             )
         elif message['type'] == 'FETCH_BING_TRACE_DATA_TRY':
             bing_trace.delay(
                 message["start"], message["stop"], message["method"],
-                self.ws.handler.client_address,
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_BING_TRACE_DATA_SUCCESS",
+                fail_constant="FETCH_BING_TRACE_DATA_FAIL",
             )
         elif message['type'] == 'FETCH_ADDRESS_SUGGESTIONS_TRY':
             address_suggest.delay(
-                message["address"],
-                self.ws.handler.client_address,
+                message["text"],
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_ADDRESS_SUGGESTIONS_SUCCESS",
+                fail_constant="FETCH_ADDRESS_SUGGESTIONS_FAIL",
             )
         elif message['type'] == 'BROADCAST':
             self.broadcast(message)
