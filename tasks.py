@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # utf-8
 
-from datetime import datetime
+# from datetime import datetime
 from functools import wraps
 from json import dumps
-# from pprint import pprint
+from pprint import pprint
 
 from celery import Celery
 from celery.schedules import crontab
@@ -109,7 +109,8 @@ def websocket_wrap(function):
             fail_constant = kwargs.pop("fail_constant")
             data = function(*args, **kwargs)
         except Exception as e:
-            error_msg = e.info or "Ops, something happened!"
+            pprint(e)
+            error_msg = "Ops, something happened!"
             return ws_send(error_msg, fail_constant, address)
         else:
             return ws_send(data, success_constant, address)
@@ -118,7 +119,7 @@ def websocket_wrap(function):
 
 @app.task(name="auckland_traffic.google_trace")
 @websocket_wrap
-def google_trace(start, stop, method, address):
+def google_trace(start, stop, method):
     params = {
         "departure_time": "now",
         "key": GOOGLE_API_KEY,
@@ -151,14 +152,14 @@ def bing_trace(start, stop, method):
         "origins": address_translate(start),
         "destinations": address_translate(stop),
         "travelMode": method,
-        "startTime": datetime.now().strftime('%Y-%m-%dT12:00:00-%H:%M'),
+        # "startTime": datetime.now().strftime('%Y-%m-%dT12:00:00-%H:%M'),
         "key": BING_API_KEY,
     }
     ret = get(BING_URL, params=params, timeout=(2, 5))
-    assert ret.ok
+    assert ret.ok, "bing fetching error"
 
     data = ret.json()
-    assert data["statusCode"] == 200
+    assert data["statusCode"] == 200, "status code is not 200"
 
     result = data["resourceSets"][0]["resources"][0]["results"][0]
     return {
@@ -185,12 +186,15 @@ def address_translate(address_text):
 
 @app.task(name="auckland_traffic.address_suggest")
 @websocket_wrap
-def address_suggest(input_text, sessiontoken):
+def address_suggest(input_text):
+    """
+    TODO: use session token
+    """
     params = {
         "key": GOOGLE_API_KEY,
         "components": "country:nz",
         "types": "address",
-        "sessiontoken": sessiontoken,
+        # "sessiontoken": sessiontoken,
         "input": input_text,
     }
     ret = get(GOOGLE_PREDICT_URL, params=params, timeout=(2, 5))
