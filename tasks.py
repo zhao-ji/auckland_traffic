@@ -7,6 +7,7 @@ from json import dumps
 from pprint import pprint
 
 from celery import Celery
+from celery import shared_task
 from celery.schedules import crontab
 from requests import get
 from websocket import create_connection
@@ -32,8 +33,8 @@ app.conf.update(
     CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_duration": {
-            "task": "auckland_traffic.fetch_duration",
-            "schedule": crontab(minute="0"),
+            "task": "fetch_duration",
+            "schedule": crontab(minute="*/5"),
             "options": {
                 "expires": 30,
                 "priority": 0,
@@ -43,7 +44,7 @@ app.conf.update(
 )
 
 
-@app.task(name="auckland_traffic.fetch_duration")
+@shared_task
 def fetch_duration():
     params = {
         "departure_time": "now",
@@ -117,7 +118,7 @@ def websocket_wrap(function):
     return wrapper
 
 
-@app.task(name="auckland_traffic.google_trace")
+@shared_task
 @websocket_wrap
 def google_trace(start, stop, method):
     params = {
@@ -145,7 +146,7 @@ def google_trace(start, stop, method):
     return {"distance": distance, "duration": duration}
 
 
-@app.task(name="auckland_traffic.bing_trace")
+@shared_task
 @websocket_wrap
 def bing_trace(start, stop, method):
     params = {
@@ -184,7 +185,7 @@ def address_translate(address_text):
     return "{},{}".format(location["lat"], location["lng"])
 
 
-@app.task(name="auckland_traffic.address_suggest")
+@shared_task
 @websocket_wrap
 def address_suggest(input_text):
     """
