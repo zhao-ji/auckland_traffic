@@ -1,7 +1,11 @@
 import datetime
+from pprint import pprint
 
+from celery.schedules import crontab
 from peewee import SqliteDatabase, Model
 from peewee import CharField, ForeignKeyField, DateTimeField, IntegerField, FloatField
+
+from apis import google_trace, bing_trace
 
 # from local_settings import DB_LOCATION
 
@@ -44,6 +48,12 @@ class Address(BaseModel):
     lantitude = CharField(default="")
     longtitude = CharField(default="")
 
+    def serialize(self):
+        return {
+            "address": self.address,
+            "alias": self.alias,
+        }
+
 
 class Route(BaseModel):
     start = ForeignKeyField(Address, backref="as_starts", null=False, on_delete="CASCADE")
@@ -55,26 +65,57 @@ class Route(BaseModel):
     def method_readable(self):
         return dict(method_choices)[self.method]
 
-    # @shared_task
-    def check_and_trace():
-        # from models import Route
-        # query = Route.select()
-        # for route in query:
-        #     if route.cron:
-        #         if not route.traces:
-        #             pass
-        #         last_trace = route.Traces[-1]
-        #         min, hour, dow, dom, moy = route.cron.split(" ")
-        #         schedule = crontab(min, hour, dow, dom, moy)
-        pass
+    def check_and_trace(self):
+        if not self.cron:
+            return
+        if not self.traces:
+            return self.trace()
+
+        last_trace = self.traces[-1]
+        min, hour, dom, moy, dow = self.cron.split(" ")
+        schedule = crontab(
+            minute=min, hour=hour, day_of_week=dow,
+            day_of_month=dom, month_of_year=moy,
+        )
+        if schedule.is_due(last_trace.created_at):
+            self.trace()
+
+    def trace(self):
+        try:
+            result = google_trace(self.start, self.stop, self.method)
+            pprint(result)
+            Trace.create(
+                route=self.id, source=0,
+                duration=result["duration"],
+                distance=result["distance"],
+            )
+        except Exception as e:
+            pprint(e)
+
+        try:
+            result = bing_trace(self.start, self.stop, self.method)
+            pprint(result)
+            Trace.create(
+                route=self.id, source=1,
+                duration=result["duration"],
+                distance=result["distance"],
+            )
+        except Exception as e:
+            pprint(e)
+
+    def serialize(self):
+        return {
+            "start": self.start,
+            "stop": self.stop,
+        }
 
 
 class Trace(BaseModel):
-    route = ForeignKeyField(Route, backref="traces", null=False, on_delete="CASCADE")
+    route = ForeignKeyField(Route, backref="traces", null=False, on_delete="CASCADE")  # noqa
     source = IntegerField(choices=source_choices)
-    # unit: km
+    # unit: m
     duration = FloatField(null=False)
-    # unit: min
+    # unit: second
     distance = FloatField(null=False)
 
     def get_source(self):
@@ -88,3 +129,4 @@ if __name__ == "__main__":
         a = Address.create(address="60 stanhope road auckland")
         b = Address.create(address="188 carrington road auckland")
         c = Route.create(start=a, stop=b, method=0)
+        c.trace()

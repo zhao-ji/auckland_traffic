@@ -20,23 +20,6 @@ class TrafficHandler(WebSocketApplication):
     def on_close(self, *args, **kwargs):
         print "delete the connection!"
 
-    def fetch_all_data(self):
-        self.ws.send(json.dumps({
-            'type': 'SUBSCRIBE_SUCCESS',
-            'data': fetch_all("1563404375"),
-        }))
-
-    def fetch_data(self, message):
-        self.ws.send(json.dumps({
-            'type': 'MESSAGE',
-            'data': fetch(
-                message["origin"],
-                message["destination"],
-                message["from"],
-                message["to"],
-            ),
-        }))
-
     def on_message(self, message):
         if message is None:
             return
@@ -44,14 +27,21 @@ class TrafficHandler(WebSocketApplication):
         message = json.loads(message)
         # turn below one into route
 
-        if message['type'] == 'MESSAGE':
-            self.broadcast(message)
-        elif message['type'] == 'SUBSCRIBE':
-            self.fetch_all_data()
+        if message['type'] == 'SUBSCRIBE':
+            self.ws.send(json.dumps({
+                'type': 'SUBSCRIBE_SUCCESS',
+                'data': fetch_all("1563404375"),
+            }))
         elif message['type'] == 'UNSUBSCRIBE':
             self.on_close()
         elif message['type'] == 'FETCH_TRAFFIC_DATA_TRY':
-            self.fetch_data(message)
+            self.ws.send(json.dumps({
+                'type': 'MESSAGE',
+                'data': fetch(
+                    message["origin"], message["destination"],
+                    message["from"], message["to"],
+                ),
+            }))
         elif message['type'] == 'FETCH_TRACE_DATA_TRY':
             google_trace.delay(
                 message["start"], message["stop"], message["method"],
