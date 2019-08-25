@@ -124,7 +124,7 @@ class Trace(BaseModel):
 
     @property
     def source_readable(self):
-        return dict(source_choices)[self.status]
+        return dict(source_choices)[self.source]
 
     def serialize(self):
         return {
@@ -133,6 +133,7 @@ class Trace(BaseModel):
             "source": self.source_readable,
             "duration": self.duration,
             "distance": self.distance,
+            "created_at": self.created_at.isoformat(),
         }
 
 

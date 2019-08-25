@@ -81,6 +81,7 @@ class TrafficHandler(WebSocketApplication):
             )
         elif message['type'] == 'FETCH_TRACE_TRY':
             fetch_trace.delay(
+                message["route_id"],
                 address=self.ws.handler.client_address,
                 success_constant="FETCH_TRACE_SUCCESS",
                 fail_constant="FETCH_TRACE_FAIL",

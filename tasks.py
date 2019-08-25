@@ -139,7 +139,7 @@ def fetch_route():
 @shared_task
 @websocket_wrap
 def fetch_trace(route_id):
-    all_trace = Trace.select().where(route_id=route_id)
+    all_trace = Trace.select().where(Trace.route_id==route_id)
     return [
         trace.serialize()
         for trace in all_trace
