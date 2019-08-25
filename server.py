@@ -8,8 +8,8 @@ from pprint import pprint
 from geventwebsocket import Resource
 from geventwebsocket import WebSocketServer, WebSocketApplication
 
-from operate import fetch, fetch_all
 from tasks import google_trace, bing_trace, address_suggest
+from tasks import fetch_address, fetch_route, fetch_trace
 
 
 class TrafficHandler(WebSocketApplication):
@@ -27,21 +27,23 @@ class TrafficHandler(WebSocketApplication):
         message = json.loads(message)
         # turn below one into route
 
+        # global websocket action
         if message['type'] == 'SUBSCRIBE':
             self.ws.send(json.dumps({
                 'type': 'SUBSCRIBE_SUCCESS',
-                'data': fetch_all("1563404375"),
+                'data': [],  # fetch_all("1563404375"),
             }))
         elif message['type'] == 'UNSUBSCRIBE':
             self.on_close()
+
+        # for home page
         elif message['type'] == 'FETCH_TRAFFIC_DATA_TRY':
             self.ws.send(json.dumps({
                 'type': 'MESSAGE',
-                'data': fetch(
-                    message["origin"], message["destination"],
-                    message["from"], message["to"],
-                ),
+                'data': [],  # fetch( message["origin"], message["destination"], message["from"], message["to"],),
             }))
+
+        # for trace page
         elif message['type'] == 'FETCH_TRACE_DATA_TRY':
             google_trace.delay(
                 message["start"], message["stop"], message["method"],
@@ -63,10 +65,34 @@ class TrafficHandler(WebSocketApplication):
                 success_constant="FETCH_ADDRESS_SUGGESTIONS_SUCCESS",
                 fail_constant="FETCH_ADDRESS_SUGGESTIONS_FAIL",
             )
+
+        # for edit page
+        elif message['type'] == 'FETCH_ADDRESS_TRY':
+            fetch_address.delay(
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_ADDRESS_SUCCESS",
+                fail_constant="FETCH_ADDRESS_FAIL",
+            )
+        elif message['type'] == 'FETCH_ROUTE_TRY':
+            fetch_route.delay(
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_ROUTE_SUCCESS",
+                fail_constant="FETCH_ROUTE_FAIL",
+            )
+        elif message['type'] == 'FETCH_TRACE_TRY':
+            fetch_trace.delay(
+                address=self.ws.handler.client_address,
+                success_constant="FETCH_TRACE_SUCCESS",
+                fail_constant="FETCH_TRACE_FAIL",
+            )
+
+        # reply from celery
         elif message['type'] == 'BROADCAST':
             self.broadcast(message)
         elif message['type'] == 'REPLY':
             self.reply(message)
+
+        # error action handler
         else:
             pprint(message)
 

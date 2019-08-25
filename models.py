@@ -9,7 +9,7 @@ from apis import google_trace, bing_trace
 
 # from local_settings import DB_LOCATION
 
-db = SqliteDatabase("here.db", {
+db = SqliteDatabase("./backup/here.db", {
     # allow readers and writers to co-exist
     'journal_mode': 'wal',
     # page-cache size in KiB  64MB
@@ -45,13 +45,16 @@ class BaseModel(Model):
 class Address(BaseModel):
     address = CharField(unique=True, null=False, index=True)
     alias = CharField(default="")
-    lantitude = CharField(default="")
-    longtitude = CharField(default="")
+    latitude = CharField(default="")
+    longitude = CharField(default="")
 
     def serialize(self):
         return {
+            "id": self.id,
             "address": self.address,
             "alias": self.alias,
+            "latitude ": self.latitude,
+            "longitude": self.longitude,
         }
 
 
@@ -83,7 +86,6 @@ class Route(BaseModel):
     def trace(self):
         try:
             result = google_trace(self.start, self.stop, self.method)
-            pprint(result)
             Trace.create(
                 route=self.id, source=0,
                 duration=result["duration"],
@@ -93,8 +95,7 @@ class Route(BaseModel):
             pprint(e)
 
         try:
-            result = bing_trace(self.start, self.stop, self.method)
-            pprint(result)
+            result = bing_trace(self.start, self.stop, self.method_readable)
             Trace.create(
                 route=self.id, source=1,
                 duration=result["duration"],
@@ -105,8 +106,11 @@ class Route(BaseModel):
 
     def serialize(self):
         return {
-            "start": self.start,
-            "stop": self.stop,
+            "id": self.id,
+            "start": self.start.serialize(),
+            "stop": self.stop.serialize(),
+            "method": self.method_readable,
+            "cron": self.cron,
         }
 
 
@@ -118,8 +122,18 @@ class Trace(BaseModel):
     # unit: second
     distance = FloatField(null=False)
 
-    def get_source(self):
+    @property
+    def source_readable(self):
         return dict(source_choices)[self.status]
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "route": self.route.serialize(),
+            "source": self.source_readable,
+            "duration": self.duration,
+            "distance": self.distance,
+        }
 
 
 if __name__ == "__main__":

@@ -13,6 +13,11 @@ from websocket import create_connection
 from local_settings import REDIS_URL
 from local_settings import LOCAL_WEBSOCKET_SERVER
 
+from models import Address, Route, Trace
+from apis import google_trace as _google_trace
+from apis import bing_trace as _bing_trace
+from apis import address_suggest as _address_suggest
+
 app = Celery("tasks")
 app.conf.update(
     CELERY_TIMEZONE="Pacific/Auckland",
@@ -83,30 +88,59 @@ def websocket_wrap(function):
 #####################################
 @shared_task
 def fetch_routes():
-    from models import Route
     for route in Route.select():
         route.check_and_trace()
 
 
 #####################################
-# websocket server views
+# websocket server views for trace page
 #####################################
 @shared_task
 @websocket_wrap
 def google_trace(start, stop, method):
-    from apis import google_trace as trace
-    return trace(start, stop, method)
+    return _google_trace(start, stop, method)
 
 
 @shared_task
 @websocket_wrap
 def bing_trace(start, stop, method):
-    from apis import bing_trace as trace
-    return trace(start, stop, method)
+    return _bing_trace(start, stop, method)
 
 
 @shared_task
 @websocket_wrap
 def address_suggest(input_text):
-    from apis import address_suggest as fetch
-    return fetch(input_text)
+    return _address_suggest(input_text)
+
+
+#####################################
+# websocket server views for trace page
+#####################################
+@shared_task
+@websocket_wrap
+def fetch_address():
+    all_address = Address.select()
+    return [
+        address.serialize()
+        for address in all_address
+    ]
+
+
+@shared_task
+@websocket_wrap
+def fetch_route():
+    all_route = Route.select()
+    return [
+        route.serialize()
+        for route in all_route
+    ]
+
+
+@shared_task
+@websocket_wrap
+def fetch_trace(route_id):
+    all_trace = Trace.select().where(route_id=route_id)
+    return [
+        trace.serialize()
+        for trace in all_trace
+    ]
