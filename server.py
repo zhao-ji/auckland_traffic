@@ -9,7 +9,8 @@ from geventwebsocket import Resource
 from geventwebsocket import WebSocketServer, WebSocketApplication
 
 from tasks import google_trace, bing_trace, address_suggest
-from tasks import fetch_address, fetch_route, fetch_trace
+from tasks import fetch_address, create_address, update_address, delete_address
+from tasks import fetch_route, fetch_trace
 
 
 class TrafficHandler(WebSocketApplication):
@@ -72,6 +73,24 @@ class TrafficHandler(WebSocketApplication):
                 address=self.ws.handler.client_address,
                 success_constant="FETCH_ADDRESS_SUCCESS",
                 fail_constant="FETCH_ADDRESS_FAIL",
+            )
+        elif message['type'] == 'CREATE_ADDRESS_TRY':
+            create_address.delay(
+                address=self.ws.handler.client_address,
+                success_constant="CREATE_ADDRESS_SUCCESS",
+                fail_constant="CREATE_ADDRESS_FAIL",
+            )
+        elif message['type'] == 'UPDATE_ADDRESS_TRY':
+            update_address.delay(
+                address=self.ws.handler.client_address,
+                success_constant="UPDATE_ADDRESS_SUCCESS",
+                fail_constant="UPDATE_ADDRESS_FAIL",
+            )
+        elif message['type'] == 'DELETE_ADDRESS_TRY':
+            delete_address.delay(
+                address=self.ws.handler.client_address,
+                success_constant="DELETE_ADDRESS_SUCCESS",
+                fail_constant="DELETE_ADDRESS_FAIL",
             )
         elif message['type'] == 'FETCH_ROUTE_TRY':
             fetch_route.delay(

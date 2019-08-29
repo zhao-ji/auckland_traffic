@@ -120,10 +120,38 @@ def address_suggest(input_text):
 @websocket_wrap
 def fetch_address():
     all_address = Address.select()
-    return [
-        address.serialize()
-        for address in all_address
-    ]
+    return [address.serialize() for address in all_address]
+
+
+@shared_task
+@websocket_wrap
+def create_address(address, alias="", latitude="", longitude=""):
+    Address.create(address=address, alias=alias, latitude=latitude, longitude=longitude)
+    return [_address.serialize() for _address in Address.select()]
+
+
+@shared_task
+@websocket_wrap
+def delete_address(address_id):
+    address = Address.get(id == address_id)
+    address.delete_instance()
+    return [_address.serialize() for _address in Address.select()]
+
+
+@shared_task
+@websocket_wrap
+def update_address(address_id, address_str=None, alias=None, latitude=None, longitude=None):
+    address = Address.get(id == address_id)
+    if address_str:
+        address.address = address_str
+    elif alias:
+        address.alias = alias
+    elif latitude:
+        address.latitude = latitude
+    elif longitude:
+        address.longitude = longitude
+    address.save()
+    return [_address.serialize() for _address in Address.select()]
 
 
 @shared_task
@@ -140,7 +168,12 @@ def fetch_route():
 @websocket_wrap
 def fetch_trace(route_id):
     all_trace = Trace.select().where(Trace.route_id==route_id)
-    return [
-        trace.serialize()
-        for trace in all_trace
-    ]
+    return [trace.serialize() for trace in all_trace]
+
+
+@shared_task
+@websocket_wrap
+def delete_trace(trace_id):
+    trace = Trace.get(id == trace_id)
+    trace.delete_instance()
+    return [_trace.serialize() for _trace in Trace.select()]
