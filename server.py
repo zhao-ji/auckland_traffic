@@ -1,157 +1,67 @@
 #!/usr/bin/env python
-# utf-8
+# coding: utf-8
 
-from collections import OrderedDict
-import json
-from pprint import pprint
+from flask import Flask, request, jsonify
 
-from geventwebsocket import Resource
-from geventwebsocket import WebSocketServer, WebSocketApplication
+from models import Address, Route, Trace
 
-from tasks import google_trace, bing_trace, address_suggest
-from tasks import fetch_address, create_address, update_address, delete_address
-from tasks import fetch_route, fetch_trace
-from views import subscribe, unsubscribe
+app = Flask(__name__)
 
 
-class TrafficHandler(WebSocketApplication):
+@app.route("/address", methods=['GET'])
+def get_address():
+    all_address = Address.select()
+    return jsonify([address.serialize() for address in all_address])
 
-    def on_open(self, *args, **kwargs):
-        print 'open the connection'
 
-    def on_close(self, *args, **kwargs):
-        print "delete the connection!"
+@app.route("/route", methods=['GET'])
+def get_route():
+    all_route = Route.select()
+    return jsonify([route.serialize() for route in all_route])
 
-    def on_message(self, message):
-        if message is None:
-            return
 
-        message = json.loads(message)
-        # turn below one into route
+@app.route("/trace", methods=['GET'])
+def get_trace():
+    route_id = request.args.get('route_id')
+    all_trace = Trace.select().where(Trace.route_id == route_id)
+    return jsonify([trace.serialize() for trace in all_trace])
 
-        handler = routes[message["type"]]
-        handler(self, **message)
 
-        # global websocket action
-        if message['type'] == 'SUBSCRIBE':
-            self.ws.send(json.dumps({
-                'type': 'SUBSCRIBE_SUCCESS',
-                'data': [],  # fetch_all("1563404375"),
-            }))
-        elif message['type'] == 'UNSUBSCRIBE':
-            self.on_close()
+@app.route("/address", methods=['DELETE'])
+def delete_address():
+    id = request.args.get('id')
+    Address.delete().where(Address.id == id)
 
-        # for home page
-        elif message['type'] == 'FETCH_TRAFFIC_DATA_TRY':
-            self.ws.send(json.dumps({
-                'type': 'MESSAGE',
-                'data': [],  # fetch( message["origin"], message["destination"], message["from"], message["to"],),
-            }))
 
-        # for trace page
-        elif message['type'] == 'FETCH_TRACE_DATA_TRY':
-            google_trace.delay(
-                message["start"], message["stop"], message["method"],
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_TRACE_DATA_SUCCESS",
-                fail_constant="FETCH_TRACE_DATA_FAIL",
-            )
-        elif message['type'] == 'FETCH_BING_TRACE_DATA_TRY':
-            bing_trace.delay(
-                message["start"], message["stop"], message["method"],
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_BING_TRACE_DATA_SUCCESS",
-                fail_constant="FETCH_BING_TRACE_DATA_FAIL",
-            )
-        elif message['type'] == 'FETCH_ADDRESS_SUGGESTIONS_TRY':
-            address_suggest.delay(
-                message["text"],
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_ADDRESS_SUGGESTIONS_SUCCESS",
-                fail_constant="FETCH_ADDRESS_SUGGESTIONS_FAIL",
-            )
+@app.route("/route", methods=['DELETE'])
+def delete_route():
+    id = request.args.get('id')
+    Route.delete().where(Route.id == id)
 
-        # for edit page
-        elif message['type'] == 'FETCH_ADDRESS_TRY':
-            fetch_address.delay(
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_ADDRESS_SUCCESS",
-                fail_constant="FETCH_ADDRESS_FAIL",
-            )
-        elif message['type'] == 'CREATE_ADDRESS_TRY':
-            create_address.delay(
-                address=self.ws.handler.client_address,
-                success_constant="CREATE_ADDRESS_SUCCESS",
-                fail_constant="CREATE_ADDRESS_FAIL",
-            )
-        elif message['type'] == 'UPDATE_ADDRESS_TRY':
-            update_address.delay(
-                address=self.ws.handler.client_address,
-                success_constant="UPDATE_ADDRESS_SUCCESS",
-                fail_constant="UPDATE_ADDRESS_FAIL",
-            )
-        elif message['type'] == 'DELETE_ADDRESS_TRY':
-            delete_address.delay(
-                address=self.ws.handler.client_address,
-                success_constant="DELETE_ADDRESS_SUCCESS",
-                fail_constant="DELETE_ADDRESS_FAIL",
-            )
-        elif message['type'] == 'FETCH_ROUTE_TRY':
-            fetch_route.delay(
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_ROUTE_SUCCESS",
-                fail_constant="FETCH_ROUTE_FAIL",
-            )
-        elif message['type'] == 'FETCH_TRACE_TRY':
-            fetch_trace.delay(
-                message["route_id"],
-                address=self.ws.handler.client_address,
-                success_constant="FETCH_TRACE_SUCCESS",
-                fail_constant="FETCH_TRACE_FAIL",
-            )
 
-        # reply from celery
-        elif message['type'] == 'BROADCAST':
-            self.broadcast(message)
-        elif message['type'] == 'REPLY':
-            self.reply(message)
+@app.trace("/trace", methods=['DELETE'])
+def delete_trace():
+    id = request.args.get('id')
+    Trace.delete().where(Trace.id == id)
 
-        # error action handler
-        else:
-            pprint(message)
 
-    def broadcast(self, message):
-        for addr, client in self.ws.handler.server.clients.iteritems():
-            pprint(addr)
-            pprint(client.address)
-            client.ws.send(json.dumps({
-                'type': 'MESSAGE',
-                'data': message['msg_data'],
-            }))
+@app.route("/address", methods=['PUT'])
+def update_address():
+    id = request.args.get('id')
+    content = request.json
+    Address.update(**content).where(Address.id == id)
 
-    def reply(self, message):
-        if "address" not in message:
-            print "message body error"
-            return
 
-        address = message["address"]
-
-        for addr, client in self.ws.handler.server.clients.iteritems():
-            if addr[0] == address[0] and addr[1] == address[1]:
-                client.ws.send(json.dumps({
-                    'type': message["data_type"],
-                    'data': message['data'],
-                }))
+@app.route("/address", methods=['POST'])
+def create_address():
+    content = request.json
+    Address.create(
+        address=content["address"],
+        alias=content.get("alias", ""),
+        latitude=content.get("latitude", ""),
+        longitude=content.get("longitude", ""),
+    )
 
 
 if __name__ == "__main__":
-    print "Listen on 127.0.0.1:8001..."
-    routes = OrderedDict([
-        ("SUBSCRIBE", subscribe),
-        ("UNSUBSCRIBE", unsubscribe),
-    ])
-    WebSocketServer(
-        ('127.0.0.1', 8001),
-        Resource(OrderedDict([("/", TrafficHandler)])),
-        debug=True,
-    ).serve_forever()
+    app.run(host="127.0.0.1", port="8002")
