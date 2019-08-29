@@ -14,9 +14,9 @@ from local_settings import REDIS_URL
 from local_settings import LOCAL_WEBSOCKET_SERVER
 
 from models import Address, Route, Trace
-from apis import google_trace as _google_trace
-from apis import bing_trace as _bing_trace
-from apis import address_suggest as _address_suggest
+from third_party_apis import google_trace as _google_trace
+from third_party_apis import bing_trace as _bing_trace
+from third_party_apis import address_suggest as _address_suggest
 
 app = Celery("tasks")
 app.conf.update(

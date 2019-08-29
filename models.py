@@ -5,7 +5,7 @@ from celery.schedules import crontab
 from peewee import SqliteDatabase, Model
 from peewee import CharField, ForeignKeyField, DateTimeField, IntegerField, FloatField
 
-from apis import google_trace, bing_trace
+from third_party_apis import google_trace, bing_trace
 
 # from local_settings import DB_LOCATION
 

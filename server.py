@@ -39,7 +39,7 @@ def delete_route():
     Route.delete().where(Route.id == id)
 
 
-@app.trace("/trace", methods=['DELETE'])
+@app.route("/trace", methods=['DELETE'])
 def delete_trace():
     id = request.args.get('id')
     Trace.delete().where(Trace.id == id)
@@ -64,4 +64,4 @@ def create_address():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port="8002")
+    app.run(host="127.0.0.1", port="8003")
