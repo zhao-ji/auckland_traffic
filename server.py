@@ -14,42 +14,22 @@ def get_address():
     return jsonify([address.serialize() for address in all_address])
 
 
-@app.route("/route", methods=['GET'])
-def get_route():
-    all_route = Route.select()
-    return jsonify([route.serialize() for route in all_route])
-
-
-@app.route("/trace", methods=['GET'])
-def get_trace():
-    route_id = request.args.get('route_id')
-    all_trace = Trace.select().where(Trace.route_id == route_id)
-    return jsonify([trace.serialize() for trace in all_trace])
-
-
-@app.route("/address", methods=['DELETE'])
-def delete_address():
-    id = request.args.get('id')
-    Address.delete().where(Address.id == id)
-
-
-@app.route("/route", methods=['DELETE'])
-def delete_route():
-    id = request.args.get('id')
-    Route.delete().where(Route.id == id)
-
-
-@app.route("/trace", methods=['DELETE'])
-def delete_trace():
-    id = request.args.get('id')
-    Trace.delete().where(Trace.id == id)
-
-
 @app.route("/address", methods=['PUT'])
 def update_address():
     id = request.args.get('id')
     content = request.json
     Address.update(**content).where(Address.id == id)
+    all_address = Address.select()
+    return jsonify([address.serialize() for address in all_address])
+
+
+@app.route("/address", methods=['DELETE'])
+def delete_address():
+    address_id = request.args.get('address_id')
+    thatone = Address.get(Address.id == address_id)
+    thatone.delete_instance()
+    all_address = Address.select()
+    return jsonify([address.serialize() for address in all_address])
 
 
 @app.route("/address", methods=['POST'])
@@ -61,6 +41,62 @@ def create_address():
         latitude=content.get("latitude", ""),
         longitude=content.get("longitude", ""),
     )
+    all_address = Address.select()
+    return jsonify([address.serialize() for address in all_address])
+
+
+@app.route("/route", methods=['GET'])
+def get_route():
+    all_route = Route.select()
+    return jsonify([route.serialize() for route in all_route])
+
+
+@app.route("/route", methods=['POST'])
+def create_route():
+    content = request.json
+    Route.create(
+        start=content["start"],
+        stop=content["stop"],
+        method=content["method"],
+        cron=content.get("cron", ""),
+    )
+    all_route = Route.select()
+    return jsonify([route.serialize() for route in all_route])
+
+
+@app.route("/route", methods=['PUT'])
+def update_route():
+    route_id = request.args.get('route_id')
+    content = request.json
+    Route.update(**content).where(Route.id == route_id)
+    all_route = Route.select()
+    return jsonify([route.serialize() for route in all_route])
+
+
+@app.route("/route", methods=['DELETE'])
+def delete_route():
+    route_id = request.args.get('route_id')
+    thatone = Route.get(Route.id == route_id)
+    thatone.delete_instance()
+    all_route = Route.select()
+    return jsonify([route.serialize() for route in all_route])
+
+
+@app.route("/trace", methods=['GET'])
+def get_trace():
+    route_id = request.args.get('route_id')
+    all_trace = Trace.select().where(Trace.route_id == route_id)
+    return jsonify([trace.serialize() for trace in all_trace])
+
+
+@app.route("/trace", methods=['DELETE'])
+def delete_trace():
+    trace_id = request.args.get('trace_id')
+    route_id = request.args.get('route_id')
+    thatone = Trace.get(Trace.id == trace_id)
+    thatone.delete_instance()
+    all_trace = Trace.select().where(Trace.route_id == route_id)
+    return jsonify([trace.serialize() for trace in all_trace])
 
 
 if __name__ == "__main__":
