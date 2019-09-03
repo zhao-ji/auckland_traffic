@@ -1,7 +1,6 @@
 import json
 
 from tasks import google_trace, bing_trace, address_suggest
-from tasks import fetch_address, fetch_route, fetch_trace
 
 
 def subscribe(request, *args, **kwargs):
