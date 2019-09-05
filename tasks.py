@@ -27,7 +27,7 @@ app.conf.update(
     CELERYBEAT_SCHEDULE_FILENAME="/tmp/celerybeat_schedule",
     CELERYBEAT_SCHEDULE={
         "fetch_routes": {
-            "task": "fetch_routes",
+            "task": "tasks.fetch_routes",
             "schedule": crontab(minute="*/15"),
             "options": {
                 "expires": 60,

@@ -9,7 +9,6 @@ from geventwebsocket import Resource
 from geventwebsocket import WebSocketServer, WebSocketApplication
 
 from tasks import google_trace, bing_trace, address_suggest
-from views import subscribe, unsubscribe
 
 
 class TrafficHandler(WebSocketApplication):
@@ -25,10 +24,6 @@ class TrafficHandler(WebSocketApplication):
             return
 
         message = json.loads(message)
-        # turn below one into route
-
-        handler = routes[message["type"]]
-        handler(self, **message)
 
         # global websocket action
         if message['type'] == 'SUBSCRIBE':
@@ -105,10 +100,6 @@ class TrafficHandler(WebSocketApplication):
 
 if __name__ == "__main__":
     print "Listen on 127.0.0.1:8001..."
-    routes = OrderedDict([
-        ("SUBSCRIBE", subscribe),
-        ("UNSUBSCRIBE", unsubscribe),
-    ])
     WebSocketServer(
         ('127.0.0.1', 8001),
         Resource(OrderedDict([("/", TrafficHandler)])),
