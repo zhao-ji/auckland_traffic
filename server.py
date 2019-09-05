@@ -16,9 +16,12 @@ def get_address():
 
 @app.route("/address", methods=['PUT'])
 def update_address():
-    id = request.args.get('id')
+    address_id = request.args.get('address_id')
+    print address_id
     content = request.json
-    Address.update(**content).where(Address.id == id)
+    print content
+    query = Address.update(**content).where(Address.id == address_id)
+    query.execute()
     all_address = Address.select()
     return jsonify([address.serialize() for address in all_address])
 
@@ -47,7 +50,10 @@ def create_address():
 
 @app.route("/route", methods=['GET'])
 def get_route():
+    address_id = request.args.get('address_id')
     all_route = Route.select()
+    if address_id:
+        all_route = all_route.where((Route.start == address_id) | (Route.stop == address_id))
     return jsonify([route.serialize() for route in all_route])
 
 

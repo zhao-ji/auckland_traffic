@@ -55,7 +55,6 @@ def bing_trace(start, stop, method="driving", start_lat="", stop_lat=""):
     assert data["statusCode"] == 200, "status code is not 200"
 
     result = data["resourceSets"][0]["resources"][0]["results"][0]
-    # print result
     return {
         "distance": result["travelDistance"] * 1000,
         "duration": result["travelDuration"],
