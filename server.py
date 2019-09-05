@@ -17,9 +17,7 @@ def get_address():
 @app.route("/address", methods=['PUT'])
 def update_address():
     address_id = request.args.get('address_id')
-    print address_id
     content = request.json
-    print content
     query = Address.update(**content).where(Address.id == address_id)
     query.execute()
     all_address = Address.select()
@@ -74,7 +72,8 @@ def create_route():
 def update_route():
     route_id = request.args.get('route_id')
     content = request.json
-    Route.update(**content).where(Route.id == route_id)
+    query = Route.update(**content).where(Route.id == route_id)
+    query.execute()
     all_route = Route.select()
     return jsonify([route.serialize() for route in all_route])
 
