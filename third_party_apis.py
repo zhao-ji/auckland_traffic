@@ -1,7 +1,9 @@
 from datetime import datetime
 from requests import get
 
-from local_settings import GOOGLE_URL, GOOGLE_PREDICT_URL, GOOGLE_API_KEY
+from local_settings import GOOGLE_URL, GOOGLE_API_KEY
+from local_settings import GOOGLE_PREDICT_URL, GOOGLE_FIND_PLACE_URL
+from local_settings import GOOGLE_NEARBY_SEARCH_URL, GOOGLE_TEXT_SEARCH_URL
 from local_settings import GOOGLE_GEOCODE_URL
 from local_settings import BING_URL, BING_API_KEY
 
@@ -46,8 +48,8 @@ def bing_trace(start, stop, method="driving", start_lat="", stop_lat=""):
         params["origins"] = start_lat
         params["destinations"] = stop_lat
     else:
-        params["origins"] = address_translate(start)
-        params["destinations"] = address_translate(stop)
+        params["origins"] = ",".join(address_translate(start))
+        params["destinations"] = ",".join(address_translate(stop))
     ret = get(BING_URL, params=params, timeout=(2, 5))
     assert ret.ok, "bing fetching error"
 
@@ -80,6 +82,54 @@ def address_suggest(input_text, session_token=""):
     return [i["description"] for i in predictions]
 
 
+def find_place(input_text):
+    params = {
+        "key": GOOGLE_API_KEY,
+        "input": input_text,
+        "inputtype": "textquery",
+        "fields": "name,formatted_address,geometry",
+        "locationbias": "circle:50000@-36.8506743,174.7624268",
+    }
+    ret = get(GOOGLE_FIND_PLACE_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    return data["candidates"]
+
+
+def nearby_search(input_text):
+    """
+    """
+    params = {
+        "key": GOOGLE_API_KEY,
+        "location": "-36.8506743,174.7624268",
+        "radius": "50000",
+        "keyword": input_text,
+        "components": "country:nz",
+        "inputtype": "textquery",
+        "types": "address",
+    }
+    ret = get(GOOGLE_NEARBY_SEARCH_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    return data["results"]
+
+
+def text_search(input_text):
+    params = {
+        "key": GOOGLE_API_KEY,
+        "query": input_text,
+        "location": "-36.8506743,174.7624268",
+        "radius": "50000",
+    }
+    ret = get(GOOGLE_TEXT_SEARCH_URL, params=params, timeout=(2, 5))
+    assert ret.ok
+
+    data = ret.json()
+    return data["results"]
+
+
 def address_translate(address_text):
     """
     address_text => latitude, longitude
@@ -93,15 +143,23 @@ def address_translate(address_text):
 
     data = ret.json()
     location = data["results"][0]["geometry"]["location"]
-    return "{},{}".format(location["lat"], location["lng"])
+    return str(location["lat"]), str(location["lng"])
 
 
 if __name__ == "__main__":
     # address_suggest("188 carrin", "123456")
-    # address_translate("68 stanhope road, auckland")
+    # address = "victoria street car"
+    # find_place(address)
+    # print '-----------------'
+    # nearby_search(address)
+    # print '-----------------'
+    # text_search(address)
+    # print '-----------------'
+    # address_suggest(address)
+    print address_translate("68 stanhope road, auckland")
     print bing_trace(
         "60 stanhope road, auckland",
         "188 carrington road, auckland", "driving")
-    print google_trace(
-        "60 stanhope road, auckland",
-        "188 carrington road, auckland", "driving")
+    # print google_trace(
+    #     "60 stanhope road, auckland",
+    #     "188 carrington road, auckland", "driving")
